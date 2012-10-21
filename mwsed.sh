@@ -71,7 +71,6 @@ function go {
 	find "$DIRECTORY/" -type l ! -exec test -r {} \; -exec unlink {} \; # remove broken redirects
 }
 
-page2man Snark
 
 umask 022
 cd $DIRECTORY
@@ -81,10 +80,3 @@ go
 
 git add .
 git commit -am "`date`"
-
-
-
-
-
-
-
