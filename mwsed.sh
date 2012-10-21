@@ -1,6 +1,7 @@
 #!/bin/bash
 
 BASEURL="https://wiki.netsoc.tcd.ie/index.php"
+DIRECTORY="/var/local/netman/man"
 
 function page2man {
 	PAGE="$1"
@@ -24,20 +25,23 @@ function page2man {
 	
 	# This block is where the actual wiki content is inserted
 	wget "$BASEURL?title=$PAGE&action=raw" -O- 2>/dev/null | 
-	sed -e 's/^=\([^=]*\)=$/.SH \1/g'                  `: # For top level headings` \
-	-e 's/^==\([^=]*\)==$/.SS \1/g'                    `: # For Sub-headings` \
-	-e 's/^=\+\([^=]*\)=\+$/.HP\n.B \1\n.br/g'         `: # For all other sub-sub headings` \
-	\
-	-e 's/<br\/>/\n.br/g'                              `: # Turn <br/> into newlines` \
-	-e 's/<\/\?blockquote>//g'                         `: # remove <blockquote> tags` \
-	-e 's/^ *\*\(.*\)$/\\(bu \1\n/'                    `: # makes bullet point work ` |
+	sed -e '
+	s/^=\([^=]*\)=$/.SH \1/g                   # For top level headings
+	s/^==\([^=]*\)==$/.SS \1/g                 # For Sub-headings
+	s/^=\+\([^=]*\)=\+$/.HP\n.B \1\n.br/g      # For all other sub-sub headings
 	
-	perl -pe "s|'''(.*?)''' ?\.?|\\n.B \"\1\"\\n|g"    `: # emboldens text` |
-	perl -pe "s|''(.*?)'' ?\.?|\\n.I \"\1\"\\n|g"      `: # italicises(actually underlines) text` |
-	perl -pe "s|\[\[(.*?)\]\] ?\.?|\\n.I \"\1\"\\n|g"  `: # underline links to other articles` |
+	s/<br\/>/\n.br/g                           # Turn <br/> into newlines
+	s/<\/\?blockquote>//g                      # Remove <blockquote> tags
+	s/^ *\*\(.*\)$/\\(bu \1\n/' |              # makes bullet points work
+
+	# This bit is perl as we need non-greedy regex	
+	perl -pe "
+	s|'''(.*?)''' ?\.?|\\n.B \"\1\"\\n|g;      # emboldens text
+	s|''(.*?)'' ?\.?|\\n.I \"\1\"\\n|g;        # italicises(actually underlines) text
+	s|\[\[(.*?)\]\] ?\.?|\\n.I \"\1\"\\n|g;    # underline links to other articles
 	
-	perl -pe 's|<code>(.*?)</code> ?\.?|\n.I "\1"\n|g' `: # Underlines <code> sections`|
-	perl -pe 's|<tt>(.*?)</tt> ?\.?|\n.I "\1"\n|g'        # same as above, but for <tt>
+	s|<code>(.*?)</code> ?\.?|\n.I \"\1\"\n|g; # Underlines <code> sections
+	s|<tt>(.*?)</tt> ?\.?|\n.I \"\1\"\n|g"     # same as above, but for <tt>
 }
 
 function getpages {
@@ -64,13 +68,13 @@ function go {
 			ln -s "$real.9" "$page.9"
 		fi
 	done
-	find . -type l ! -exec test -r {} \; -exec unlink {} \; # remove broken redirects
+	find "$DIRECTORY/" -type l ! -exec test -r {} \; -exec unlink {} \; # remove broken redirects
 }
 
-
+page2man Snark
 
 umask 022
-cd ~/man
+cd $DIRECTORY
 rm *.9 2>/dev/null
 
 go
